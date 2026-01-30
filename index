@@ -13,21 +13,41 @@
             --bg-dark: #0f172a;
             --sidebar-dark: #0b1120;
         }
+        
+        * {
+            box-sizing: border-box;
+        }
+
         body, html {
             background-color: var(--bg-dark) !important;
             margin: 0;
             padding: 0;
             color: #f1f5f9;
             font-family: 'Assistant', sans-serif;
-            height: 100%;
+            height: 100vh;
+            width: 100vw;
             overflow: hidden;
         }
+
         #app {
             display: flex;
             height: 100vh;
-            width: 100%;
+            width: 100vw;
             background-color: var(--bg-dark);
+            position: fixed;
+            top: 0;
+            left: 0;
         }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: var(--bg-dark);
+            position: relative;
+        }
+
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
         }
@@ -38,6 +58,10 @@
             background: #1e293b;
             border-radius: 10px;
         }
+
+        /* וידוא שהודעות נראות גם ללא טעינת Tailwind מלאה */
+        .message-bot { background-color: #1e293b; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .message-user { background-color: #312e81; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
     </style>
 </head>
 <body class="text-slate-200">
@@ -67,8 +91,8 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col relative bg-[#0f172a]">
-        <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-[#0f172a] z-20">
+    <main>
+        <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-[#0f172a] z-20 shrink-0">
             <div class="flex items-center gap-3 md:hidden">
                 <div id="mobile-logo" class="w-8 h-8"></div>
                 <h1 class="font-bold text-white">זיידא Chat</h1>
@@ -89,7 +113,7 @@
         </div>
 
         <!-- Input Area -->
-        <footer class="p-4 md:p-8 bg-[#0f172a] border-t border-slate-800/50">
+        <footer class="p-4 md:p-8 bg-[#0f172a] border-t border-slate-800/50 shrink-0">
             <div class="max-w-3xl mx-auto">
                 <div id="error-box" class="hidden mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg">
                     <span id="error-message"></span>
@@ -137,10 +161,11 @@
     `;
 
     async function init() {
+        console.log("System Initializing...");
         document.getElementById('logo-container').innerHTML = zaydeIconSvg;
         document.getElementById('mobile-logo').innerHTML = zaydeIconSvg;
         
-        if (!apiKey) {
+        if (!apiKey || apiKey === "") {
             showError("מפתח API חסר. יש להזין מפתח בקוד כדי שהמערכת תעבוד.");
         } else {
             hideError();
@@ -162,13 +187,21 @@
         
         try {
             const res = await fetch(JSON_URL);
+            if (!res.ok) throw new Error('Fetch failed');
             jsonData = await res.json();
             statusText.innerText = "נתונים מעודכנים";
             if (chatHistory.length === 0) {
                 addMessage('bot', 'היי, אני זיידא Chat. המידע הוטען, איך אני יכול לעזור לך היום?');
             }
         } catch (err) {
-            showError("נכשלה טעינת הנתונים מהשרת.");
+            console.error("Data fetch error:", err);
+            statusText.innerText = "שגיאה בטעינת נתונים";
+            showError("נכשלה טעינת הנתונים מהשרת. ייתכן שיש בעיית חיבור.");
+            // Fallback empty data to allow interface to show
+            jsonData = {}; 
+            if (chatHistory.length === 0) {
+                addMessage('bot', 'המערכת עלתה, אך לא הצלחתי למשוך את הנתונים העדכניים. תוכל עדיין לנסות לשאול שאלות כלליות.');
+            }
         } finally {
             refreshIcon.classList.remove('animate-spin');
         }
@@ -199,7 +232,7 @@
     async function handleSend() {
         const inputEl = document.getElementById('user-input');
         const text = inputEl.value.trim();
-        if (!text || isThinking || !jsonData || !apiKey) return;
+        if (!text || isThinking || !apiKey) return;
 
         inputEl.value = '';
         addMessage('user', text);
@@ -210,7 +243,8 @@
             const response = await callAI(text);
             addMessage('bot', response);
         } catch (err) {
-            showError("שגיאת תקשורת. וודא שמפתח ה-API תקין.");
+            console.error("AI Error:", err);
+            showError("שגיאת תקשורת עם שרת ה-AI. וודא שמפתח ה-API תקין ושיש חיבור אינטרנט.");
         } finally {
             isThinking = false;
         }
@@ -219,7 +253,7 @@
     async function callAI(promptText) {
         const systemPrompt = `Your name is "זיידא Chat". 
         RULES: Hebrew only, no tables, no technical IDs, use short common names only.
-        Data: ${JSON.stringify(jsonData)}`;
+        Data context: ${JSON.stringify(jsonData)}`;
 
         const contents = chatHistory.map(m => ({
             role: m.role === 'user' ? 'user' : 'model',
@@ -235,7 +269,11 @@
             })
         });
         
-        if (!response.ok) throw new Error('API Error');
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error?.message || 'API Error');
+        }
+        
         const data = await response.json();
         return data.candidates[0].content.parts[0].text;
     }
@@ -261,7 +299,12 @@
         addMessage('bot', 'השיחה אופסה. אפשר להתחיל מחדש.');
     }
 
-    window.onload = init;
+    // Ensure initialization runs after DOM is ready
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+        init();
+    } else {
+        document.addEventListener("DOMContentLoaded", init);
+    }
 </script>
 
 </body>
