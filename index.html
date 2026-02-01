@@ -6,21 +6,19 @@
     <title>זיידא Chat - Data Intelligence</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- פונט Heebo לקריאות מקסימלית בעברית -->
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
         body, html {
-            background-color: #0f172a !important;
+            background-color: #0f172a;
             margin: 0;
             padding: 0;
             color: #f1f5f9;
             font-family: 'Heebo', sans-serif;
             height: 100vh;
             width: 100vw;
-            display: block !important;
-            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
         }
 
         #app {
@@ -29,12 +27,14 @@
             width: 100vw;
         }
 
+        /* Sidebar styling */
         aside {
-            width: 280px;
+            width: 300px;
             background-color: #0b1120;
             border-left: 1px solid #1e293b;
             display: flex;
             flex-direction: column;
+            transition: all 0.3s ease;
         }
 
         main {
@@ -42,6 +42,7 @@
             display: flex;
             flex-direction: column;
             background-color: #0f172a;
+            position: relative;
         }
 
         #chat-window {
@@ -51,9 +52,57 @@
             scroll-behavior: smooth;
         }
 
+        /* Message styling */
+        .message-wrapper {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 16px;
+            width: 100%;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar-frame {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+
+        .message-content {
+            color: #e2e8f0;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .message-content strong {
+            color: #818cf8;
+            font-weight: 700;
+        }
+
+        /* Custom scrollbar */
+        #chat-window::-webkit-scrollbar {
+            width: 6px;
+        }
+        #chat-window::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 10px;
+        }
+
         .input-area {
             padding: 24px;
-            border-top: 1px solid #1e293b;
+            background: linear-gradient(to top, #0f172a 80%, transparent);
         }
 
         .typing-indicator {
@@ -62,122 +111,82 @@
             color: #818cf8;
             margin: 10px 0;
             font-weight: 500;
+            padding-right: 56px;
         }
 
-        /* הגדרות קריאות טקסט */
-        .message-content {
-            color: #ffffff;
-            font-size: 16px;
-            line-height: 1.6;
-            font-weight: 400;
-        }
-
-        .message-content strong {
-            font-weight: 700;
-            color: #a5b4fc;
-        }
-
-        .message-content p { 
-            margin-bottom: 8px; 
-        }
-
-        /* מכולת הודעה - יישור לימין לכל ההודעות */
-        .message-wrapper {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 16px 20px;
-            display: flex;
-            gap: 16px;
-            width: 100%;
-            justify-content: flex-start;
-        }
-
-        .avatar-frame {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #1e293b;
-            border: 1px solid #334155;
-            flex-shrink: 0;
-            margin-top: 4px;
-        }
-
-        .zayde-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .role-label {
-            font-size: 11px;
-            font-weight: 700;
-            color: #64748b;
-            margin-bottom: 2px;
-            text-transform: uppercase;
-        }
-
-        .bot-label {
-            color: #818cf8;
-        }
+        .bot-label { color: #818cf8; font-weight: 700; font-size: 12px; margin-bottom: 4px; }
+        .user-label { color: #94a3b8; font-weight: 700; font-size: 12px; margin-bottom: 4px; }
 
         @media (max-width: 768px) {
             aside { display: none; }
-            .message-wrapper { padding: 12px 16px; }
         }
     </style>
 </head>
 <body>
 
 <div id="app">
+    <!-- Sidebar -->
     <aside>
-        <div style="padding: 24px; display: flex; align-items: center; gap: 12px;">
-            <div class="avatar-frame" style="border-radius: 10px;">
-                <img src="https://files.oaiusercontent.com/file-KAt8zIuR71OshOInYQo26fKx?se=2024-10-24T14%3A58%3A10Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20immutable%2C%20private&rscd=attachment%3B%20filename%3D0f348982-628d-4f2a-89a9-3072230558b9.webp&sig=G04yVpT0TjWcl4%2Bf2eN%2BG28xV%2Bw96Fh9vDq8q6rL6RE%3D" alt="זיידא" class="zayde-img" onerror="this.src='https://ui-avatars.com/api/?name=זיידא&background=6366f1&color=fff'">
+        <div class="p-6 flex items-center gap-4 border-b border-slate-800/50">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             </div>
-            <span style="font-weight: 700; font-size: 1.25rem; color: white;">זיידא Chat</span>
+            <span class="font-bold text-xl tracking-tight">זיידא Chat</span>
         </div>
         
-        <div style="flex: 1; padding: 12px;">
-            <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); padding: 12px; border-radius: 12px; color: #a5b4fc; font-size: 13px; margin-bottom: 12px;">
-                <div style="font-weight: 600; margin-bottom: 4px;">ניתוח נתונים משפחתי</div>
-                <div id="connection-indicator" style="opacity: 0.8;">מתחבר למאגר...</div>
+        <div class="flex-1 p-4 space-y-4">
+            <div class="bg-indigo-500/5 border border-indigo-500/20 p-4 rounded-2xl">
+                <div class="text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2">סטטוס מערכת</div>
+                <div id="connection-indicator" class="text-slate-300 text-sm flex items-center gap-2">
+                    <span class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+                    מתחבר למאגר...
+                </div>
             </div>
-            <button onclick="resetChat()" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 10px; border-radius: 10px; cursor: pointer; text-align: center; font-size: 14px; font-weight: 500; transition: background 0.2s;">
+
+            <button onclick="resetChat()" class="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 p-3 rounded-xl transition-all font-medium text-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
                 איפוס שיחה
             </button>
         </div>
 
-        <div style="padding: 20px; border-top: 1px solid #1e293b; font-size: 11px; color: #475569; text-align: center;">
-            <p id="status-text">מתחבר...</p>
+        <div class="p-6 border-top border-slate-800 text-[10px] text-slate-500 text-center uppercase tracking-widest">
+            Zayde Intel • v4.2.0
         </div>
     </aside>
 
+    <!-- Main Content -->
     <main>
-        <header style="height: 64px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
-            <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Zayde Intelligence v4.1</div>
+        <header class="h-16 border-b border-slate-800/50 flex items-center justify-between px-8 bg-slate-900/30 backdrop-blur-md sticky top-0 z-10">
+            <div class="flex items-center gap-2">
+                <div class="h-2 w-2 bg-green-500 rounded-full"></div>
+                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Live Data Feed</span>
+            </div>
         </header>
 
         <div id="chat-window">
-            <div id="messages-container" style="display: flex; flex-direction: column;"></div>
-            <div style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
-                <div id="typing" class="typing-indicator">זיידא מצליב נתונים...</div>
+            <div id="messages-container" class="flex flex-col"></div>
+            <div id="typing" class="typing-indicator">
+                <span class="animate-pulse">זיידא מצליב נתונים...</span>
             </div>
         </div>
 
         <div class="input-area">
-            <div style="max-width: 800px; margin: 0 auto; position: relative;">
-                <div id="error-box" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; padding: 12px; border-radius: 12px; margin-bottom: 12px; font-size: 13px;">
+            <div class="max-width-[850px] mx-auto relative group">
+                <div id="error-box" class="hidden bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl mb-4 text-sm flex items-center gap-3">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                     <span id="error-message"></span>
                 </div>
-                <div style="position: relative; display: flex; align-items: center;">
-                    <input id="user-input" type="text" placeholder="הקלד שאלה לניתוח..." style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px 20px 16px 60px; color: white; outline: none; font-size: 16px; font-family: 'Heebo', sans-serif;">
-                    <button id="send-btn" style="position: absolute; left: 10px; background: #6366f1; border: none; color: white; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                
+                <div class="relative flex items-center">
+                    <input id="user-input" type="text" placeholder="שאל אותי על המשפחה (למשל: מי הבן של...)" 
+                        class="w-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-2xl py-4 pr-6 pl-16 text-white outline-none transition-all placeholder:text-slate-500 text-lg">
+                    
+                    <button id="send-btn" class="absolute left-3 bg-indigo-600 hover:bg-indigo-500 text-white w-10 h-10 rounded-xl transition-all flex items-center justify-center shadow-lg shadow-indigo-600/20 active:scale-95">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
+                </div>
+                <div class="mt-3 text-center text-[11px] text-slate-600">
+                    מופעל על ידי בינה מלאכותית • מבוסס על נתוני אמת
                 </div>
             </div>
         </div>
@@ -185,115 +194,117 @@
 </div>
 
 <script>
-    const apiKey = ""; 
-
+    // הגדרות מערכת
+    const apiKey = ""; // המפתח יוזרק בזמן ריצה בסביבה המאובטחת
     const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
-    const JSON_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhd6c80L4a661c2xo_VjiP4OULo1xLX5AhideTNnIBwADhgq8vI1IO0QKlxg2IFHgkbVuJFI7av0qoIPUOa6XBgLnrv_6QRMoR0MPTiwyx523icxQ5OTMPf5uqnJnjINErkwVPWCdRXtreFsnTAbNfvtnnrKi0JryZtYaOAqk1--ZKSl5eq3pm5dz5PrCnF_HmzKw1RMus93HK1nU7B3lDpivRKe_kvHapELqAU5OiUpCaSn4HTBbwqWN9xGZxQelCmNCJw2zaKATDV8hXNT2St_rLsrw&lib=MKvnEb8OzXBIaQxFnaeDEdJl9ogoAk9d_";
-    const ZAYDE_IMG_URL = "https://files.oaiusercontent.com/file-KAt8zIuR71OshOInYQo26fKx?se=2024-10-24T14%3A58%3A10Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20immutable%2C%20private&rscd=attachment%3B%20filename%3D0f348982-628d-4f2a-89a9-3072230558b9.webp&sig=G04yVpT0TjWcl4%2Bf2eN%2BG28xV%2Bw96Fh9vDq8q6rL6RE%3D";
+    const DATA_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhd6c80L4a661c2xo_VjiP4OULo1xLX5AhideTNnIBwADhgq8vI1IO0QKlxg2IFHgkbVuJFI7av0qoIPUOa6XBgLnrv_6QRMoR0MPTiwyx523icxQ5OTMPf5uqnJnjINErkwVPWCdRXtreFsnTAbNfvtnnrKi0JryZtYaOAqk1--ZKSl5eq3pm5dz5PrCnF_HmzKw1RMus93HK1nU7B3lDpivRKe_kvHapELqAU5OiUpCaSn4HTBbwqWN9xGZxQelCmNCJw2zaKATDV8hXNT2St_rLsrw&lib=MKvnEb8OzXBIaQxFnaeDEdJl9ogoAk9d_";
+    const ZAYDE_AVATAR = "https://ui-avatars.com/api/?name=זיידא&background=6366f1&color=fff&size=128";
 
-    let jsonData = null;
+    let familyData = null;
     let chatHistory = [];
     let isThinking = false;
 
+    // אתחול
     async function init() {
         document.getElementById('send-btn').onclick = handleSend;
         document.getElementById('user-input').onkeydown = (e) => { if (e.key === 'Enter') handleSend(); };
-        await fetchData();
+        
+        await loadFamilyData();
     }
 
-    async function fetchData() {
-        const statusText = document.getElementById('status-text');
-        const connectionInd = document.getElementById('connection-indicator');
-        
-        statusText.innerText = "מעדכן נתונים...";
+    // טעינת הנתונים מה-Google Script
+    async function loadFamilyData() {
+        const indicator = document.getElementById('connection-indicator');
         try {
-            const res = await fetch(JSON_URL);
-            jsonData = await res.json();
+            const response = await fetch(DATA_URL);
+            if (!response.ok) throw new Error("Fetch failed");
+            familyData = await response.json();
             
-            statusText.innerText = "מחובר";
-            connectionInd.innerText = "מחובר ומסונכרן למאגר.";
-            
-            if (chatHistory.length === 0) {
-                addMessage('bot', 'שלום! אני **זיידא Chat**. כל הנתונים המשפחתיים נטענו. מה תרצה לבדוק?');
-            }
+            indicator.innerHTML = `<span class="w-2 h-2 bg-green-500 rounded-full"></span> מחובר ומסונכרן`;
+            addMessage('bot', 'שלום! אני **זיידא Chat**. כל הנתונים המשפחתיים נטענו בהצלחה. איך אוכל לעזור היום?');
         } catch (err) {
-            statusText.innerText = "שגיאת חיבור";
-            connectionInd.innerText = "שגיאה בסנכרון נתונים.";
-            connectionInd.style.color = "#f87171";
-            showError("לא ניתן היה לטעון את קובץ הנתונים.");
+            indicator.innerHTML = `<span class="w-2 h-2 bg-red-500 rounded-full"></span> שגיאת סנכרון`;
+            showError("לא הצלחתי לטעון את מאגר הנתונים. וודא שהקישור תקין.");
         }
     }
 
+    // הוספת הודעה לממשק
     function addMessage(role, content) {
         const container = document.getElementById('messages-container');
-        const wrapper = document.createElement('div');
         const isBot = role === 'bot';
         
+        const wrapper = document.createElement('div');
         wrapper.className = 'message-wrapper';
         
-        const avatarContent = isBot 
-            ? `<img src="${ZAYDE_IMG_URL}" class="zayde-img" onerror="this.src='https://ui-avatars.com/api/?name=זיידא&background=6366f1&color=fff'">` 
-            : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+        const avatarHtml = isBot 
+            ? `<img src="${ZAYDE_AVATAR}" class="w-full h-full object-cover">`
+            : `<div class="bg-slate-700 w-full h-full flex items-center justify-center text-xs font-bold">YOU</div>`;
 
         wrapper.innerHTML = `
-            <div class="avatar-frame" style="background: ${isBot ? 'transparent' : '#6366f1'};">
-                ${avatarContent}
+            <div class="avatar-frame ${isBot ? 'bg-indigo-600' : 'bg-slate-700'} shadow-md">
+                ${avatarHtml}
             </div>
-            <div style="flex: 1;">
-                <div class="role-label ${isBot ? 'bot-label' : ''}">${isBot ? 'זיידא CHAT' : 'משתמש'}</div>
+            <div class="flex-1">
+                <div class="${isBot ? 'bot-label' : 'user-label'}">${isBot ? 'זיידא CHAT' : 'משתמש'}</div>
                 <div class="message-content">${isBot ? marked.parse(content) : content}</div>
             </div>
         `;
+
         container.appendChild(wrapper);
-        chatHistory.push({ role, content });
+        chatHistory.push({ role: isBot ? 'model' : 'user', parts: [{ text: content }] });
         
-        const win = document.getElementById('chat-window');
-        setTimeout(() => win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' }), 50);
+        scrollChat();
     }
 
+    // טיפול בשליחה
     async function handleSend() {
         const input = document.getElementById('user-input');
         const text = input.value.trim();
-        if (!text || isThinking) return;
         
+        if (!text || isThinking || !familyData) return;
+
         hideError();
         input.value = '';
         addMessage('user', text);
         setThinking(true);
-        
+
         try {
-            const response = await callAIWithRetry(text, apiKey);
+            const response = await callGemini(text);
             addMessage('bot', response);
         } catch (err) {
-            showError(`שגיאת AI: ${err.message}`);
+            showError(`שגיאת תקשורת: ${err.message}`);
         } finally {
             setThinking(false);
         }
     }
 
-    async function callAIWithRetry(text, key, retries = 5) {
-        let delay = 1000;
-        const systemPrompt = `שמך "זיידא Chat". אתה עוזר חכם לניתוח נתונים משפחתיים.
-        התאריך היום הוא: ${new Date().toLocaleDateString('he-IL')} (סוף ינואר 2026).
+    // קריאה ל-API עם Exponential Backoff
+    async function callGemini(text, retries = 5) {
+        const systemPrompt = `שמך "זיידא Chat". אתה מומחה לניתוח נתונים משפחתיים.
+        התאריך היום: ${new Date().toLocaleDateString('he-IL')}.
+        השנה הנוכחית: ${new Date().getFullYear()}.
         
-        חוקים קריטיים לדיוק בנתונים:
-        1. גילאים: חשב גיל על פי שנת הלידה הלועזית בלבד. לדוגמה: מי שנולד ב-2003 הוא כיום (2026) בן 22.
-        2. תאריכים עבריים: אם מופיע תאריך עברי (למשל ט' חשון תשס"ד), אל תנסה להמיר אותו ידנית אם זה מוביל לסתירה. אם המשתמש אמר שזו טעות המרה, קבל את דבריו.
-        3. אמינות: אל תמציא עובדות ("קרוב", "רחוק") אם הן לא מגובות בנתונים.
-        4. פרטיות: שמות פרטיים בלבד.
-        נתונים לניתוח: ${JSON.stringify(jsonData)}`;
+        הנחיות עבודה:
+        1. השתמש בנתונים הבאים בלבד: ${JSON.stringify(familyData)}
+        2. חישובי גיל: הפחת את שנת הלידה מהשנה הנוכחית (${new Date().getFullYear()}).
+        3. סגנון: היה מנומס, עני בעברית רהוטה. השתמש ב-Markdown (מודגש, רשימות) כדי להפוך את התשובה לקריאה.
+        4. דיוק: אם אינך מוצא מידע בנתונים, ציין זאת במפורש ואל תמציא.
+        5. פרטיות: אל תחשוף פרטים מזהים רגישים מעבר לשמות וקשרים משפחתיים.`;
 
+        let delay = 1000;
         for (let i = 0; i < retries; i++) {
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${key}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: chatHistory.map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] })),
+                        contents: chatHistory,
                         systemInstruction: { parts: [{ text: systemPrompt }] }
                     })
                 });
-                if (!response.ok) throw new Error("Connection failed");
+
+                if (!response.ok) throw new Error("API call failed");
+                
                 const data = await response.json();
                 return data.candidates[0].content.parts[0].text;
             } catch (err) {
@@ -304,27 +315,33 @@
         }
     }
 
+    // עזרים
     function setThinking(val) {
         isThinking = val;
         document.getElementById('typing').style.display = val ? 'block' : 'none';
+        scrollChat();
+    }
+
+    function scrollChat() {
         const win = document.getElementById('chat-window');
-        win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
+        setTimeout(() => win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' }), 50);
     }
 
     function showError(msg) {
-        document.getElementById('error-box').style.display = 'block';
+        const box = document.getElementById('error-box');
+        box.classList.remove('hidden');
         document.getElementById('error-message').innerText = msg;
     }
 
-    function hideError() { 
-        document.getElementById('error-box').style.display = 'none'; 
+    function hideError() {
+        document.getElementById('error-box').classList.add('hidden');
     }
-    
+
     function resetChat() {
         document.getElementById('messages-container').innerHTML = '';
         chatHistory = [];
         hideError();
-        addMessage('bot', 'השיחה אופסה. אני כאן לכל שאלה על הנתונים.');
+        addMessage('bot', 'השיחה אופסה. אני מוכן לניתוח חדש.');
     }
 
     window.onload = init;
