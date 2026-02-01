@@ -6,7 +6,8 @@
     <title>זיידא Chat - Data Intelligence</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- פונט Heebo לקריאות מקסימלית בעברית -->
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
@@ -15,10 +16,11 @@
             margin: 0;
             padding: 0;
             color: #f1f5f9;
-            font-family: 'Assistant', sans-serif;
+            font-family: 'Heebo', sans-serif;
             height: 100vh;
             width: 100vw;
             display: block !important;
+            -webkit-font-smoothing: antialiased;
         }
 
         #app {
@@ -28,7 +30,7 @@
         }
 
         aside {
-            width: 260px;
+            width: 280px;
             background-color: #0b1120;
             border-left: 1px solid #1e293b;
             display: flex;
@@ -45,28 +47,54 @@
         #chat-window {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 20px 0;
+            scroll-behavior: smooth;
         }
 
         .input-area {
-            padding: 20px;
+            padding: 24px;
             border-top: 1px solid #1e293b;
         }
 
         .typing-indicator {
             display: none;
-            font-size: 12px;
-            color: #6366f1;
-            margin: 10px 47px;
+            font-size: 13px;
+            color: #818cf8;
+            margin: 10px 0;
+            font-weight: 500;
         }
 
-        .message-content h1, .message-content h2, .message-content h3 { font-weight: bold; margin-bottom: 8px; }
-        .message-content ul { list-style-type: disc; margin-right: 20px; margin-bottom: 10px; }
-        .message-content p { margin-bottom: 8px; }
+        /* הגדרות קריאות טקסט */
+        .message-content {
+            color: #ffffff;
+            font-size: 16px;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        .message-content strong {
+            font-weight: 700;
+            color: #a5b4fc;
+        }
+
+        .message-content p { 
+            margin-bottom: 8px; 
+        }
+
+        /* מכולת הודעה - יישור לימין לכל ההודעות */
+        .message-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 16px 20px;
+            display: flex;
+            gap: 16px;
+            width: 100%;
+            justify-content: flex-start;
+        }
 
         .avatar-frame {
-            width: 42px;
-            height: 42px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             overflow: hidden;
             display: flex;
@@ -75,6 +103,7 @@
             background: #1e293b;
             border: 1px solid #334155;
             flex-shrink: 0;
+            margin-top: 4px;
         }
 
         .zayde-img {
@@ -83,8 +112,21 @@
             object-fit: cover;
         }
 
+        .role-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+        }
+
+        .bot-label {
+            color: #818cf8;
+        }
+
         @media (max-width: 768px) {
             aside { display: none; }
+            .message-wrapper { padding: 12px 16px; }
         }
     </style>
 </head>
@@ -93,7 +135,7 @@
 <div id="app">
     <aside>
         <div style="padding: 24px; display: flex; align-items: center; gap: 12px;">
-            <div id="logo-container" class="avatar-frame">
+            <div class="avatar-frame" style="border-radius: 10px;">
                 <img src="https://files.oaiusercontent.com/file-KAt8zIuR71OshOInYQo26fKx?se=2024-10-24T14%3A58%3A10Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20immutable%2C%20private&rscd=attachment%3B%20filename%3D0f348982-628d-4f2a-89a9-3072230558b9.webp&sig=G04yVpT0TjWcl4%2Bf2eN%2BG28xV%2Bw96Fh9vDq8q6rL6RE%3D" alt="זיידא" class="zayde-img" onerror="this.src='https://ui-avatars.com/api/?name=זיידא&background=6366f1&color=fff'">
             </div>
             <span style="font-weight: 700; font-size: 1.25rem; color: white;">זיידא Chat</span>
@@ -101,30 +143,29 @@
         
         <div style="flex: 1; padding: 12px;">
             <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); padding: 12px; border-radius: 12px; color: #a5b4fc; font-size: 13px; margin-bottom: 12px;">
-                <div style="font-weight: 600; margin-bottom: 4px;">ניתוח נתונים בזמן אמת</div>
-                <div style="opacity: 0.8;">מחובר למסד הנתונים המשפחתי</div>
+                <div style="font-weight: 600; margin-bottom: 4px;">ניתוח נתונים משפחתי</div>
+                <div id="connection-indicator" style="opacity: 0.8;">מתחבר למאגר...</div>
             </div>
-            <button onclick="resetChat()" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 10px; border-radius: 10px; cursor: pointer; text-align: right; font-size: 14px; transition: all 0.2s;">
+            <button onclick="resetChat()" style="width: 100%; background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 10px; border-radius: 10px; cursor: pointer; text-align: center; font-size: 14px; font-weight: 500; transition: background 0.2s;">
                 איפוס שיחה
             </button>
         </div>
 
         <div style="padding: 20px; border-top: 1px solid #1e293b; font-size: 11px; color: #475569; text-align: center;">
-            <p id="status-text">טוען מערכת...</p>
+            <p id="status-text">מתחבר...</p>
         </div>
     </aside>
 
     <main>
         <header style="height: 64px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
-            <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.1em;">Zayde Intelligence Engine v3.6</div>
-            <button onclick="fetchData()" id="refresh-btn" style="background: none; border: none; color: #64748b; cursor: pointer;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-            </button>
+            <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Zayde Intelligence v4.1</div>
         </header>
 
         <div id="chat-window">
-            <div id="messages-container" style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px;"></div>
-            <div id="typing" class="typing-indicator">זיידא מנתח נתונים...</div>
+            <div id="messages-container" style="display: flex; flex-direction: column;"></div>
+            <div style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
+                <div id="typing" class="typing-indicator">זיידא מצליב נתונים...</div>
+            </div>
         </div>
 
         <div class="input-area">
@@ -133,9 +174,9 @@
                     <span id="error-message"></span>
                 </div>
                 <div style="position: relative; display: flex; align-items: center;">
-                    <input id="user-input" type="text" placeholder="הקלד שאלה לניתוח..." style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px 20px 16px 60px; color: white; outline: none; font-size: 16px;">
+                    <input id="user-input" type="text" placeholder="הקלד שאלה לניתוח..." style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px 20px 16px 60px; color: white; outline: none; font-size: 16px; font-family: 'Heebo', sans-serif;">
                     <button id="send-btn" style="position: absolute; left: 10px; background: #6366f1; border: none; color: white; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
                 </div>
             </div>
@@ -144,11 +185,6 @@
 </div>
 
 <script>
-    /**
-     * פתרון לשגיאת ה-API Key:
-     * 1. בתוך ה-Canvas (כאן): הקוד משתמש במפתח המערכת באופן אוטומטי.
-     * 2. מחוץ ל-Canvas (ב-GitHub): עליך להזין מפתח בגרשיים מטה.
-     */
     const apiKey = ""; 
 
     const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
@@ -159,95 +195,77 @@
     let chatHistory = [];
     let isThinking = false;
 
-    // פונקציית עזר לבחירת המפתח הנכון
-    function getEffectiveKey() {
-        // עדיפות ראשונה: מפתח שהוזן ידנית
-        if (apiKey && apiKey !== "") return apiKey;
-        // עדיפות שנייה: מפתח מערכת בסביבת Canvas (למניעת שגיאות בתצוגה המקדימה)
-        if (typeof window !== 'undefined' && window.GOOGLE_API_KEY) return window.GOOGLE_API_KEY;
-        return "";
-    }
-
     async function init() {
         document.getElementById('send-btn').onclick = handleSend;
         document.getElementById('user-input').onkeydown = (e) => { if (e.key === 'Enter') handleSend(); };
-        
-        const currentKey = getEffectiveKey();
-        if (!currentKey) {
-            // לא נציג שגיאה קבועה ב-Console כדי לא להציק למשתמש, אלא רק כשמנסים לשלוח הודעה
-            console.warn("Zayde Chat: No API Key detected yet. Will check again on send.");
-        }
-        
         await fetchData();
     }
 
     async function fetchData() {
         const statusText = document.getElementById('status-text');
+        const connectionInd = document.getElementById('connection-indicator');
+        
         statusText.innerText = "מעדכן נתונים...";
         try {
             const res = await fetch(JSON_URL);
-            if (!res.ok) throw new Error("Failed to fetch JSON data");
             jsonData = await res.json();
-            statusText.innerText = "מערכת מסונכרנת";
+            
+            statusText.innerText = "מחובר";
+            connectionInd.innerText = "מחובר ומסונכרן למאגר.";
+            
             if (chatHistory.length === 0) {
-                addMessage('bot', 'שלום! אני זיידא Chat. הטענתי את כל הנתונים המשפחתיים ואני מוכן לניתוח. מה תרצה לדעת?');
+                addMessage('bot', 'שלום! אני **זיידא Chat**. כל הנתונים המשפחתיים נטענו. מה תרצה לבדוק?');
             }
         } catch (err) {
-            statusText.innerText = "נתק בנתונים";
-            console.error("Data fetch error:", err);
-            showError("שגיאה בטעינת קובץ הנתונים מהשרת.");
+            statusText.innerText = "שגיאת חיבור";
+            connectionInd.innerText = "שגיאה בסנכרון נתונים.";
+            connectionInd.style.color = "#f87171";
+            showError("לא ניתן היה לטעון את קובץ הנתונים.");
         }
     }
 
     function addMessage(role, content) {
         const container = document.getElementById('messages-container');
-        const msgDiv = document.createElement('div');
+        const wrapper = document.createElement('div');
         const isBot = role === 'bot';
-        msgDiv.style.display = 'flex';
-        msgDiv.style.gap = '16px';
+        
+        wrapper.className = 'message-wrapper';
         
         const avatarContent = isBot 
             ? `<img src="${ZAYDE_IMG_URL}" class="zayde-img" onerror="this.src='https://ui-avatars.com/api/?name=זיידא&background=6366f1&color=fff'">` 
-            : `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+            : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
 
-        msgDiv.innerHTML = `
+        wrapper.innerHTML = `
             <div class="avatar-frame" style="background: ${isBot ? 'transparent' : '#6366f1'};">
                 ${avatarContent}
             </div>
             <div style="flex: 1;">
-                <div style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 4px;">${isBot ? 'זיידא CHAT' : 'משתמש'}</div>
-                <div class="message-content" style="color: #e2e8f0; font-size: 15px; line-height: 1.6;">${isBot ? marked.parse(content) : content}</div>
+                <div class="role-label ${isBot ? 'bot-label' : ''}">${isBot ? 'זיידא CHAT' : 'משתמש'}</div>
+                <div class="message-content">${isBot ? marked.parse(content) : content}</div>
             </div>
         `;
-        container.appendChild(msgDiv);
+        container.appendChild(wrapper);
         chatHistory.push({ role, content });
+        
         const win = document.getElementById('chat-window');
-        win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
+        setTimeout(() => win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' }), 50);
     }
 
     async function handleSend() {
         const input = document.getElementById('user-input');
         const text = input.value.trim();
-        
         if (!text || isThinking) return;
         
-        const currentKey = getEffectiveKey();
-        if (!currentKey) {
-            showError("מפתח API חסר. כדי להפעיל את הצ'אט מחוץ לסביבת הפיתוח, עליך להזין API Key בקוד המקור (שורה 147).");
-            return;
-        }
-
         hideError();
         input.value = '';
         addMessage('user', text);
         setThinking(true);
         
         try {
-            const response = await callAIWithRetry(text, currentKey);
+            const response = await callAIWithRetry(text, apiKey);
             addMessage('bot', response);
         } catch (err) {
-            console.error("Detailed AI Error:", err);
-            showError(`שגיאת תקשורת: ${err.message}`);
+            showError(`שגיאת AI: ${err.message}`);
         } finally {
             setThinking(false);
         }
@@ -255,12 +273,15 @@
 
     async function callAIWithRetry(text, key, retries = 5) {
         let delay = 1000;
-        const systemPrompt = `שמך "זיידא Chat". אתה עוזר ניתוח נתונים משפחתי.
-        כללי תשובה:
-        1. אל תציג תעודות זהות או קודים טכניים.
-        2. השתמש בשמות פרטיים בלבד, ללא שמות משפחה.
-        3. אם יש כפילות בשם, ציין "שם של בן הזוג" (למשל: יצחק של רבקה).
-        4. נתונים: ${JSON.stringify(jsonData)}`;
+        const systemPrompt = `שמך "זיידא Chat". אתה עוזר חכם לניתוח נתונים משפחתיים.
+        התאריך היום הוא: ${new Date().toLocaleDateString('he-IL')} (סוף ינואר 2026).
+        
+        חוקים קריטיים לדיוק בנתונים:
+        1. גילאים: חשב גיל על פי שנת הלידה הלועזית בלבד. לדוגמה: מי שנולד ב-2003 הוא כיום (2026) בן 22.
+        2. תאריכים עבריים: אם מופיע תאריך עברי (למשל ט' חשון תשס"ד), אל תנסה להמיר אותו ידנית אם זה מוביל לסתירה. אם המשתמש אמר שזו טעות המרה, קבל את דבריו.
+        3. אמינות: אל תמציא עובדות ("קרוב", "רחוק") אם הן לא מגובות בנתונים.
+        4. פרטיות: שמות פרטיים בלבד.
+        נתונים לניתוח: ${JSON.stringify(jsonData)}`;
 
         for (let i = 0; i < retries; i++) {
             try {
@@ -272,16 +293,11 @@
                         systemInstruction: { parts: [{ text: systemPrompt }] }
                     })
                 });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
-                }
-
+                if (!response.ok) throw new Error("Connection failed");
                 const data = await response.json();
                 return data.candidates[0].content.parts[0].text;
             } catch (err) {
-                if (err.message.includes("403") || err.message.includes("401") || i === retries - 1) throw err;
+                if (i === retries - 1) throw err;
                 await new Promise(r => setTimeout(r, delay));
                 delay *= 2;
             }
@@ -291,6 +307,8 @@
     function setThinking(val) {
         isThinking = val;
         document.getElementById('typing').style.display = val ? 'block' : 'none';
+        const win = document.getElementById('chat-window');
+        win.scrollTo({ top: win.scrollHeight, behavior: 'smooth' });
     }
 
     function showError(msg) {
@@ -298,14 +316,15 @@
         document.getElementById('error-message').innerText = msg;
     }
 
-    function hideError() { document.
-    mentById('error-box').style.display = 'none'; }
+    function hideError() { 
+        document.getElementById('error-box').style.display = 'none'; 
+    }
     
     function resetChat() {
         document.getElementById('messages-container').innerHTML = '';
         chatHistory = [];
         hideError();
-        addMessage('bot', 'השיחה אופסה. במה אוכל לעזור?');
+        addMessage('bot', 'השיחה אופסה. אני כאן לכל שאלה על הנתונים.');
     }
 
     window.onload = init;
