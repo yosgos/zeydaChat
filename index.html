@@ -116,7 +116,7 @@
 
     <main>
         <header style="height: 64px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
-            <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.1em;">Zayde Intelligence Engine v3.3</div>
+            <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.1em;">Zayde Intelligence Engine v3.6</div>
             <button onclick="fetchData()" id="refresh-btn" style="background: none; border: none; color: #64748b; cursor: pointer;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
             </button>
@@ -144,8 +144,13 @@
 </div>
 
 <script>
-    // שים לב: כדי שהקוד יעבוד ב-GitHub, עליך להזין כאן מפתח API של Google Gemini
+    /**
+     * פתרון לשגיאת ה-API Key:
+     * 1. בתוך ה-Canvas (כאן): הקוד משתמש במפתח המערכת באופן אוטומטי.
+     * 2. מחוץ ל-Canvas (ב-GitHub): עליך להזין מפתח בגרשיים מטה.
+     */
     const apiKey = ""; 
+
     const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
     const JSON_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhd6c80L4a661c2xo_VjiP4OULo1xLX5AhideTNnIBwADhgq8vI1IO0QKlxg2IFHgkbVuJFI7av0qoIPUOa6XBgLnrv_6QRMoR0MPTiwyx523icxQ5OTMPf5uqnJnjINErkwVPWCdRXtreFsnTAbNfvtnnrKi0JryZtYaOAqk1--ZKSl5eq3pm5dz5PrCnF_HmzKw1RMus93HK1nU7B3lDpivRKe_kvHapELqAU5OiUpCaSn4HTBbwqWN9xGZxQelCmNCJw2zaKATDV8hXNT2St_rLsrw&lib=MKvnEb8OzXBIaQxFnaeDEdJl9ogoAk9d_";
     const ZAYDE_IMG_URL = "https://files.oaiusercontent.com/file-KAt8zIuR71OshOInYQo26fKx?se=2024-10-24T14%3A58%3A10Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20immutable%2C%20private&rscd=attachment%3B%20filename%3D0f348982-628d-4f2a-89a9-3072230558b9.webp&sig=G04yVpT0TjWcl4%2Bf2eN%2BG28xV%2Bw96Fh9vDq8q6rL6RE%3D";
@@ -154,13 +159,23 @@
     let chatHistory = [];
     let isThinking = false;
 
+    // פונקציית עזר לבחירת המפתח הנכון
+    function getEffectiveKey() {
+        // עדיפות ראשונה: מפתח שהוזן ידנית
+        if (apiKey && apiKey !== "") return apiKey;
+        // עדיפות שנייה: מפתח מערכת בסביבת Canvas (למניעת שגיאות בתצוגה המקדימה)
+        if (typeof window !== 'undefined' && window.GOOGLE_API_KEY) return window.GOOGLE_API_KEY;
+        return "";
+    }
+
     async function init() {
         document.getElementById('send-btn').onclick = handleSend;
         document.getElementById('user-input').onkeydown = (e) => { if (e.key === 'Enter') handleSend(); };
         
-        // בדיקת מפתח API ראשונית
-        if (!apiKey) {
-            console.warn("API Key is missing. The chat will not work outside the preview environment.");
+        const currentKey = getEffectiveKey();
+        if (!currentKey) {
+            // לא נציג שגיאה קבועה ב-Console כדי לא להציק למשתמש, אלא רק כשמנסים לשלוח הודעה
+            console.warn("Zayde Chat: No API Key detected yet. Will check again on send.");
         }
         
         await fetchData();
@@ -171,6 +186,7 @@
         statusText.innerText = "מעדכן נתונים...";
         try {
             const res = await fetch(JSON_URL);
+            if (!res.ok) throw new Error("Failed to fetch JSON data");
             jsonData = await res.json();
             statusText.innerText = "מערכת מסונכרנת";
             if (chatHistory.length === 0) {
@@ -179,6 +195,7 @@
         } catch (err) {
             statusText.innerText = "נתק בנתונים";
             console.error("Data fetch error:", err);
+            showError("שגיאה בטעינת קובץ הנתונים מהשרת.");
         }
     }
 
@@ -214,8 +231,9 @@
         
         if (!text || isThinking) return;
         
-        if (!apiKey && typeof __initial_auth_token === 'undefined') {
-            showError("חסר מפתח API. אנא הגדר את apiKey בקוד.");
+        const currentKey = getEffectiveKey();
+        if (!currentKey) {
+            showError("מפתח API חסר. כדי להפעיל את הצ'אט מחוץ לסביבת הפיתוח, עליך להזין API Key בקוד המקור (שורה 147).");
             return;
         }
 
@@ -225,28 +243,28 @@
         setThinking(true);
         
         try {
-            const response = await callAIWithRetry(text);
+            const response = await callAIWithRetry(text, currentKey);
             addMessage('bot', response);
         } catch (err) {
-            console.error("AI Communication Error:", err);
-            showError("שגיאת תקשורת עם ה-AI. וודא שמפתח ה-API תקין.");
+            console.error("Detailed AI Error:", err);
+            showError(`שגיאת תקשורת: ${err.message}`);
         } finally {
             setThinking(false);
         }
     }
 
-    async function callAIWithRetry(text, retries = 5) {
+    async function callAIWithRetry(text, key, retries = 5) {
         let delay = 1000;
+        const systemPrompt = `שמך "זיידא Chat". אתה עוזר ניתוח נתונים משפחתי.
+        כללי תשובה:
+        1. אל תציג תעודות זהות או קודים טכניים.
+        2. השתמש בשמות פרטיים בלבד, ללא שמות משפחה.
+        3. אם יש כפילות בשם, ציין "שם של בן הזוג" (למשל: יצחק של רבקה).
+        4. נתונים: ${JSON.stringify(jsonData)}`;
+
         for (let i = 0; i < retries; i++) {
             try {
-                const systemPrompt = `שמך "זיידא Chat". אתה עוזר ניתוח נתונים משפחתי.
-                כללי תשובה:
-                1. אל תציג תעודות זהות או קודים טכניים.
-                2. השתמש בשמות פרטיים בלבד, ללא שמות משפחה.
-                3. אם יש כפילות בשם, ציין "שם של בן הזוג" (למשל: יצחק של רבקה).
-                4. נתונים: ${JSON.stringify(jsonData)}`;
-                
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${key}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -257,13 +275,13 @@
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error?.message || "Unknown API Error");
+                    throw new Error(errorData.error?.message || `HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
                 return data.candidates[0].content.parts[0].text;
             } catch (err) {
-                if (i === retries - 1) throw err;
+                if (err.message.includes("403") || err.message.includes("401") || i === retries - 1) throw err;
                 await new Promise(r => setTimeout(r, delay));
                 delay *= 2;
             }
@@ -280,11 +298,13 @@
         document.getElementById('error-message').innerText = msg;
     }
 
-    function hideError() { document.getElementById('error-box').style.display = 'none'; }
+    function hideError() { document.
+    mentById('error-box').style.display = 'none'; }
     
     function resetChat() {
         document.getElementById('messages-container').innerHTML = '';
         chatHistory = [];
+        hideError();
         addMessage('bot', 'השיחה אופסה. במה אוכל לעזור?');
     }
 
