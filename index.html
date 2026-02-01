@@ -94,7 +94,6 @@
     <aside>
         <div style="padding: 24px; display: flex; align-items: center; gap: 12px;">
             <div id="logo-container" class="avatar-frame">
-                <!-- Using the original uploaded image -->
                 <img src="https://files.oaiusercontent.com/file-KAt8zIuR71OshOInYQo26fKx?se=2024-10-24T14%3A58%3A10Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20immutable%2C%20private&rscd=attachment%3B%20filename%3D0f348982-628d-4f2a-89a9-3072230558b9.webp&sig=G04yVpT0TjWcl4%2Bf2eN%2BG28xV%2Bw96Fh9vDq8q6rL6RE%3D" alt="זיידא" class="zayde-img" onerror="this.src='https://ui-avatars.com/api/?name=זיידא&background=6366f1&color=fff'">
             </div>
             <span style="font-weight: 700; font-size: 1.25rem; color: white;">זיידא Chat</span>
@@ -117,7 +116,7 @@
 
     <main>
         <header style="height: 64px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 32px;">
-            <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.1em;">Zayde Intelligence Engine v3.2</div>
+            <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.1em;">Zayde Intelligence Engine v3.3</div>
             <button onclick="fetchData()" id="refresh-btn" style="background: none; border: none; color: #64748b; cursor: pointer;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
             </button>
@@ -145,6 +144,7 @@
 </div>
 
 <script>
+    // שים לב: כדי שהקוד יעבוד ב-GitHub, עליך להזין כאן מפתח API של Google Gemini
     const apiKey = ""; 
     const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
     const JSON_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhd6c80L4a661c2xo_VjiP4OULo1xLX5AhideTNnIBwADhgq8vI1IO0QKlxg2IFHgkbVuJFI7av0qoIPUOa6XBgLnrv_6QRMoR0MPTiwyx523icxQ5OTMPf5uqnJnjINErkwVPWCdRXtreFsnTAbNfvtnnrKi0JryZtYaOAqk1--ZKSl5eq3pm5dz5PrCnF_HmzKw1RMus93HK1nU7B3lDpivRKe_kvHapELqAU5OiUpCaSn4HTBbwqWN9xGZxQelCmNCJw2zaKATDV8hXNT2St_rLsrw&lib=MKvnEb8OzXBIaQxFnaeDEdJl9ogoAk9d_";
@@ -157,6 +157,12 @@
     async function init() {
         document.getElementById('send-btn').onclick = handleSend;
         document.getElementById('user-input').onkeydown = (e) => { if (e.key === 'Enter') handleSend(); };
+        
+        // בדיקת מפתח API ראשונית
+        if (!apiKey) {
+            console.warn("API Key is missing. The chat will not work outside the preview environment.");
+        }
+        
         await fetchData();
     }
 
@@ -172,6 +178,7 @@
             }
         } catch (err) {
             statusText.innerText = "נתק בנתונים";
+            console.error("Data fetch error:", err);
         }
     }
 
@@ -204,16 +211,25 @@
     async function handleSend() {
         const input = document.getElementById('user-input');
         const text = input.value.trim();
+        
         if (!text || isThinking) return;
+        
+        if (!apiKey && typeof __initial_auth_token === 'undefined') {
+            showError("חסר מפתח API. אנא הגדר את apiKey בקוד.");
+            return;
+        }
+
         hideError();
         input.value = '';
         addMessage('user', text);
         setThinking(true);
+        
         try {
             const response = await callAIWithRetry(text);
             addMessage('bot', response);
         } catch (err) {
-            showError("שגיאה בתקשורת");
+            console.error("AI Communication Error:", err);
+            showError("שגיאת תקשורת עם ה-AI. וודא שמפתח ה-API תקין.");
         } finally {
             setThinking(false);
         }
@@ -238,6 +254,12 @@
                         systemInstruction: { parts: [{ text: systemPrompt }] }
                     })
                 });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || "Unknown API Error");
+                }
+
                 const data = await response.json();
                 return data.candidates[0].content.parts[0].text;
             } catch (err) {
@@ -259,6 +281,7 @@
     }
 
     function hideError() { document.getElementById('error-box').style.display = 'none'; }
+    
     function resetChat() {
         document.getElementById('messages-container').innerHTML = '';
         chatHistory = [];
